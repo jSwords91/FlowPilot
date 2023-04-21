@@ -1,10 +1,12 @@
 import os
 from typing import Callable, Any
 
+import os
+from typing import Callable, Any, Optional
 
 class FlowPilot:
-    def __init__(self):
-        pass
+    def __init__(self, project_name: Optional[str] = None):
+        self.project_name = project_name
 
     def _get_file_name(self, func: Callable) -> str:
         """Get the name of the file to save the function."""
@@ -20,6 +22,9 @@ class FlowPilot:
             return func(*args, **kwargs)
 
         # Create the directory if it doesn't exist
+        if self.project_name:
+            dir_path = os.path.join(self.project_name, dir_path)
+
         try:
             os.makedirs(dir_path, exist_ok=True)
         except OSError:
@@ -65,6 +70,7 @@ class FlowPilot:
         """Tag a function as a test function and save it in the 'tests' directory."""
         dir_path: str = 'tests'
         return self._file_writer(func, dir_path)
+
 
     
 ##### Individual functions ####
