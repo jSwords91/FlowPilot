@@ -7,15 +7,18 @@ This encourages modular code, organises projects effortlessly, and aids in produ
 
 # Usage
 
-## Import
+## Install
 
 `!pip install flow-pilot`
 
-`import FlowPilot`
+## Import & Initiate `FlowPilot` Object
 
-## Initiate `FlowPilot` Object
+```python
+import FlowPilot
 
-`fp = FlowPilot()`
+fp = FlowPilot()`
+
+```
 
 In future you will be able to define a custom directory here rather than defaulting to `./`
 
@@ -32,8 +35,18 @@ def test_function_x():
     pass
 ```
     
-This will write your functions in to the appropriate folders.
+This will write your functions in to the appropriate folders. For example:
 
+```
+Project/
+│
+├── data_loader/
+│   ├── my_data_loader.py
+|
+├── tests/
+│   ├── test_function_x.py
+│
+```
 
 Alternatively, after the pip install:
 
