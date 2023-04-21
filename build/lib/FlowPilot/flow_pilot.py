@@ -115,7 +115,7 @@ def data_loader(func: Callable) -> Callable[..., Any]:
     dir_path: str = './data_loader'
     return file_writer(func, dir_path)
 
-def data_writer(func: Callable) -> Callable[..., Any]:
+def data_loader(func: Callable) -> Callable[..., Any]:
     """Tag a function as a data writer and save it in the 'data_writer' directory."""
     dir_path: str = './data_writer'
     return file_writer(func, dir_path)
