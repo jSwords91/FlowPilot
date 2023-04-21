@@ -40,8 +40,12 @@ To tag your functions, you need to use the appropriate decorator provided by Flo
 def my_data_loader():
     pass
 
-@fp.test
-def test_function_x():
+@fp.preprocessor
+def my_preprocessor():
+    pass
+
+@fp.data_writer
+def my_data_writer():
     pass
 ```
     
@@ -52,39 +56,69 @@ Project/
 │
 ├── data_loader/
 │   ├── my_data_loader.py
-|
-├── tests/
-│   ├── test_function_x.py
 │
+├── preprocessor/
+│   ├── my_preprocessor.py
+│
+├── data_writer/
+│   ├── my_data_writer.py
+
 ```
 
-
-It is also possible to create a new project structure:
+It is also possible to create a new project structure, and possibly multiple if required:
 
 ```python
-fp = FlowPilot(project_name='new_project')
+fpCRM = FlowPilot(project_name='new_CRM_project')
 
-@fp.data_loader
-def my_data_loader():
+fpSales = FlowPilot(project_name='new_Sales_project')
+
+@fpCRM.data_loader
+def my_data_loader_for_crm():
     pass
 
-@fp.test
-def test_function_x():
+@fpCRM.preprocessor
+def my_preprocessor_for_crm():
+    pass
+
+@fpCRM.data_writer
+def my_data_writer_for_crm():
+    pass
+
+@fpSales.data_loader
+def my_data_loader_for_sales():
     pass
 
 
-```
-This will create a new structure
+@fpSales.data_writer
+def my_data_writer():
+    pass
 
 ```
-new_project/
+This will create the new structures
+
+```
+new_CRM_project/
 │
 ├── data_loader/
-│   ├── my_data_loader.py
-|
-├── tests/
-│   ├── test_function_x.py
+│   ├── my_data_loader_for_crm.py
 │
+├── preprocessor/
+│   ├── my_preprocessor_for_crm.py
+│
+├── data_writer/
+│   ├── my_data_writer_for_crm.py
+│
+new_Sales_project/
+│
+├── data_loader/
+│   ├── my_data_loader_for_sales.py
+│
+├── preprocessor/
+│   ├── my_preprocessor_for_sales.py
+│
+├── data_writer/
+│   ├── my_data_writer_for_sales.py
+
 ```
 
 
@@ -112,8 +146,3 @@ The tags we have currently are:
 * model_training
 * data_viz
 
-
-# To Do:
-
-* Testing
-* Add user defined function path rather then only default current directory
