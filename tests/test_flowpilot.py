@@ -24,6 +24,20 @@ def test_data_loader():
     # Clean up the directory
     shutil.rmtree("my_project")
     
+def test_data_writer():
+    # Create a FlowPilot instance and define a test data loader function
+    fp = FlowPilot(project_name="my_project")
+    @fp.data_writer
+    def write_data():
+        pass
+    
+    # Check that the function was saved to the correct directory
+    file_path = os.path.join("my_project", "data_writer", "write_data.py")
+    assert os.path.exists(file_path)
+    
+    # Clean up the directory
+    shutil.rmtree("my_project")
+    
 
 def test_preprocessor():
     # Create a FlowPilot instance and define a test preprocessor function
