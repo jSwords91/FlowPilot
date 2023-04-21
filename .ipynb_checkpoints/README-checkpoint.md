@@ -7,6 +7,8 @@ FlowPilot is a package that helps Data Engineers and Data Scientists organize th
 
 **Easy organization**: FlowPilot automatically organizes your code into directories based on the tags you provide. This saves you time and effort and makes it easy to find what you need.
 
+**Reduced complexity**: FlowPilot's tagging system simplifies the process of finding specific functions and understanding their purpose, making it easier to maintain and update a project over time.
+
 **Production-ready code**: By using FlowPilot, you can ensure that your code is production-ready by organizing it in a way that is easy to manage and maintain.
 
 ## *Organise your code automatically*
