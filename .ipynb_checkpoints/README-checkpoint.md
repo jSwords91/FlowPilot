@@ -1,8 +1,9 @@
 # FlowPilot
-A package to help Data Engineers and Data Scientists organise their code
+A package to help Data Engineers and Data Scientists organise their code.
+
+This encourages modular code, organises projects effortlessly, and aids in production.
 
 # Organise your code automatically
-
 
 ## Import
 
@@ -28,6 +29,14 @@ def test_function_x():
 ```
     
 This will write your functions in to the appropriate folders.
+
+The tags we have currently are:
+* data_loader
+* preprocessor
+* test
+* model_training
+* data_viz
+
 
 # To Do:
 
