@@ -1,0 +1,7 @@
+LICENSE
+README.md
+setup.py
+flow_pilot.egg-info/PKG-INFO
+flow_pilot.egg-info/SOURCES.txt
+flow_pilot.egg-info/dependency_links.txt
+flow_pilot.egg-info/top_level.txt
