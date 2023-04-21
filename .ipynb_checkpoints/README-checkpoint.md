@@ -16,13 +16,13 @@ A package to help Data Engineers and Data Scientists organise their code
 
 ## Tag your functions
 
-`@fp.data_loader
+```@fp.data_loader
 def my_data_loader():
-    pass`
+    pass```
     
-`@fp.test
+```@fp.test
 def test_function_x():
-pass`
+    pass```
     
     
 This will write your functions in to the appropriate folders.
