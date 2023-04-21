@@ -24,9 +24,9 @@ FlowPilot is a package that helps Data Engineers and Data Scientists organize th
 To use FlowPilot, you need to import the package and create a FlowPilot object. Here's how you can do it:
 
 ```python
-import FlowPilot
+from FlowPilot import flow_pilot
 
-fp = FlowPilot()`
+fp = flow_pilot.FlowPilot()
 
 ```
 
@@ -120,24 +120,6 @@ new_Sales_project/
 │   ├── my_data_writer_for_sales.py
 
 ```
-
-
-Alternatively, after the pip install:
-
-```python
-from FlowPilot import *
-
-
-@data_loader
-def my_data_loader():
-    pass
-
-@test
-def test_function_x():
-    pass
-```
-
-This will again use the standard functionality and write to the current directory.
 
 The tags we have currently are:
 * data_loader

@@ -1,7 +1,4 @@
 import os
-from typing import Callable, Any
-
-import os
 from typing import Callable, Any, Optional
 
 class FlowPilot:
@@ -49,6 +46,11 @@ class FlowPilot:
     def data_loader(self, func: Callable) -> Callable[..., Any]:
         """Tag a function as a data loader and save it in the 'data_loader' directory."""
         dir_path: str = 'data_loader'
+        return self._file_writer(func, dir_path)
+    
+    def data_writer(self, func: Callable) -> Callable[..., Any]:
+        """Tag a function as a data writer and save it in the 'data_writer' directory."""
+        dir_path: str = 'data_writer'
         return self._file_writer(func, dir_path)
 
     def preprocessor(self, func: Callable) -> Callable[..., Any]:
