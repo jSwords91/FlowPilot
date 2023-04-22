@@ -1,5 +1,6 @@
 # Ignore Notebooks
 *.ipynb
+*.ipynb_checkpoints
 
 .env
 .venv
