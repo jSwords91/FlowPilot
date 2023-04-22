@@ -6,3 +6,7 @@
 
 env/
 venv/
+
+build/
+dist/
+
