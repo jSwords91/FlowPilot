@@ -1,1 +1,0 @@
-OPEN_AI_API_KEY="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"
