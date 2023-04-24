@@ -13,27 +13,26 @@ The tags we have currently are:
 * test
 * custom
 
-## **We are actively looking for contributions!**
-
+## **Contributions welcome!**
 
 ## Benefits of using FlowPilot
-**Modular code**: FlowPilot encourages you to write modular code by organizing your functions into separate files. This makes it easier to test and maintain your code.
+- **Modular code**: FlowPilot encourages you to write modular code by organizing your functions into separate files. This makes it easier to test and maintain your code.
 
-**Easy organization**: FlowPilot automatically organizes your code into directories based on the tags you provide. This saves you time and effort and makes it easy to find what you need.
+- **Easy organization**: FlowPilot automatically organizes your code into directories based on the tags you provide. This saves you time and effort and makes it easy to find what you need.
 
-**Reduced complexity**: FlowPilot's tagging system simplifies the process of finding specific functions and understanding their purpose, making it easier to maintain and update a project over time.
+- **Reduced complexity**: FlowPilot's tagging system simplifies the process of finding specific functions and understanding their purpose, making it easier to maintain and update a project over time.
 
-**Pipelines**: Execute your code in the order it is intended.
+- **Pipelines**: Execute your code in the order it is intended.
 
-**Production-ready code**: By using FlowPilot, you can ensure that your code is production-ready by organizing it in a way that is easy to manage and maintain.
+- **Production-ready code**: By using FlowPilot, you can ensure that your code is production-ready by organizing it in a way that is easy to manage and maintain.
 
-**Easy function registration**: FlowPilot provides a convenient way to register functions and associate them with a category and comment. This can help ensure that all functions are properly documented and categorized.
+- **Easy function registration**: FlowPilot provides a convenient way to register functions and associate them with a category and comment. This can help ensure that all functions are properly documented and categorized.
 
-**Script compilation**: FlowPilot can automatically generate Python scripts for each category based on the registered functions. This can save time and reduce errors when preparing scripts for deployment.
+- **Script compilation**: FlowPilot can automatically generate Python scripts for each category based on the registered functions. This can save time and reduce errors when preparing scripts for deployment.
 
-**Custom categories**: FlowPilot allows for the creation of custom categories, so developers can easily extend the existing categories to suit their needs.
+- **Custom categories**: FlowPilot allows for the creation of custom categories, so developers can easily extend the existing categories to suit their needs.
 
-**Project-level overview**: FlowPilot provides a way to display all registered functions in the project, along with their associated categories and comments. This can help developers get a high-level overview of the project and quickly identify any gaps in documentation or categories.
+- **Project-level overview**: FlowPilot provides a way to display all registered functions in the project, along with their associated categories and comments. This can help developers get a high-level overview of the project and quickly identify any gaps in documentation or categories.
 
 
 # Usage 
@@ -43,8 +42,7 @@ The tags we have currently are:
 To use FlowPilot, you need to import the package and create a FlowPilot object. Here's how you will soon be able to do it:
 
 ```python
-import FlowPilot
-
+from FlowPilot import *
 ```
 
 ## Tag your functions: Effortless Organisation & Pipeline Building
@@ -60,34 +58,37 @@ We'll use titanic dataset.
 ```python
 fp = FlowPilot(project_name="TitanicProject")
 
-
-@fp.data_reader(comment="Reads in a pandas dataframe, defaults to titanic sample")
-def read(filepath: str = "./sample_data/titanic.csv") -> pd.DataFrame:
+@fp.data_reader(comment="Reads in a pandas dataframe")
+def read(filepath: str) -> pd.DataFrame:
     return pd.read_csv(filepath)
 
-@fp.data_transformer(comment="Filters dataset to male only")
-def get_males_only(df: pd.DataFrame) -> pd.DataFrame:
-    return df[df['Sex'] == "male"]
+@fp.data_transformer(comment="Filters dataset by gender")
+def get_gender_only(df: pd.DataFrame, gender: str = "") -> pd.DataFrame:
+    return df[df['Sex'] == gender]
 
 @fp.data_transformer(comment="Calculates avg. age by survival")
 def get_survivor_age(df: pd.DataFrame) -> pd.DataFrame:
     return df.groupby(["Survived"])["Age"].mean()
 
-@fp.test(comment="Test reader")
+@fp.test(comment="Tests something...")
 def test_read(df: pd.DataFrame) -> pd.DataFrame:
+    """ Do some tests..."""
     return df
 
 # For one off use, you can use the custom decorator
-@fp.custom(category_name='data_evaluator', comment="Evaluates models")
+@fp.custom(category_name='data_evaluator', comment="Evaluates something...")
 def evaluate(df: pd.DataFrame) -> pd.DataFrame:
+    """Do some evaluation..."""
     return df
 
 # If you are going to use a category repeatedly
-fp.create_new_category(name="data_visualize")
+fp.create_new_category(name="data_visualizer")
 
-@fp.data_visualize(comment="Visualize dataset")
-def visualize_df(df: pd.DataFrame) -> None:
-    return None
+@fp.data_visualizer(comment="Visualize something...")
+def plot_age_dist_by_pclass(df: pd.DataFrame) -> None:
+    """Visualize something..."""
+    
+
 ```
 
 Now we have tagged our functions to their categories.
@@ -106,13 +107,13 @@ This will display all your functions registered in their categories along with t
         "data_reader": [
             {
                 "name": "read",
-                "comment": "Reads in a pandas dataframe, defaults to titanic sample"
+                "comment": "Reads in a pandas dataframe"
             }
         ],
         "data_transformer": [
             {
-                "name": "get_males_only",
-                "comment": "Filters dataset to male only"
+                "name": "get_gender_only",
+                "comment": "Filters dataset by gender"
             },
             {
                 "name": "get_survivor_age",
@@ -122,19 +123,19 @@ This will display all your functions registered in their categories along with t
         "test": [
             {
                 "name": "test_read",
-                "comment": "Test reader"
+                "comment": "Tests something..."
             }
         ],
         "data_evaluator": [
             {
                 "name": "evaluate",
-                "comment": "Evaluates models"
+                "comment": "Evaluates something..."
             }
         ],
-        "data_visualize": [
+        "data_visualizer": [
             {
-                "name": "visualize_df",
-                "comment": "Visualize dataset"
+                "name": "plot_age_dist_by_pclass",
+                "comment": "Visualize something..."
             }
         ]
     }
@@ -143,17 +144,16 @@ This will display all your functions registered in their categories along with t
 ```
 ## Pipelines
 
-Next, we can define a Pipeline. 
+Next, we can define a Pipeline. Notice how we can provide arguments for the functions too:
 
 ```python
 pipeline = Pipeline(fp)
-pipeline.add_step("data_reader", "read")
-pipeline.add_step("data_transformer", "get_males_only")
-pipeline.add_step("data_transformer", "get_survivor_age")
-pipeline.add_step("data_evaluator", "evaluate")
+pipeline.add_step("data_reader", read, "./sample_data/titanic.csv")
+pipeline.add_step("data_transformer", get_gender_only, "female")
+pipeline.add_step("data_transformer", get_survivor_age)
 
 # Now the pipeline executes in order
-pipeline.execute("./sample_data/titanic.csv")
+pipeline.execute()
 ```
 
 The UI/UX is still in development. 
@@ -186,8 +186,8 @@ TitanicProject/
 ├── data_evaluator/
 │   ├── data_evaluator.py
 │
-├── data_evaluator/
-│   ├── data_evaluator.py
+├── data_visualizer/
+│   ├── data_visualizer.py
 │
 ├── test/
 │   ├── test.py
@@ -203,11 +203,11 @@ fpCRM = FlowPilot(project_name='new_CRM_project')
 
 fpSales = FlowPilot(project_name='new_Sales_project')
 
-@fpCRM.data_loader
+@fpCRM.data_reader
 def my_data_loader_for_crm():
     pass
 
-@fpCRM.preprocessor
+@fpCRM.data_transformer
 def my_preprocessor_for_crm():
     pass
 
@@ -215,7 +215,7 @@ def my_preprocessor_for_crm():
 def my_data_writer_for_crm():
     pass
 
-@fpSales.data_loader
+@fpSales.data_reader
 def my_data_loader_for_sales():
     pass
 
@@ -227,6 +227,10 @@ def my_data_writer():
 ```
 This will create the new structures.
 
+# Features in Dev
 
-## We are actively looking for contributions!
+- **Data quality constraints**: Add expectations to your pipelines
 
+- **DAGs**: Visualize your pipeline
+
+- **Improved Script Genearation**: Currently .py files are created without imports. This is a problem to solve.
