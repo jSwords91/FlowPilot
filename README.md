@@ -4,27 +4,34 @@ FlowPilot is a package that helps Data Engineers and Data Scientists organize th
 
 It encourages modular code, organizes projects effortlessly, and aids in production. With FlowPilot, you can tag your functions and automatically organize them into the appropriate directories. This makes it easy to manage your code and maintain your projects.
 
-The newest addition to FlowPilot is Pipelines. This feature is shown below.
-
-The tags we have currently are:
+The tags we have built in currently are:
 * data_reader
 * data_writer
 * data_transformer
 * test
 * custom
 
-## **Contributions welcome!**
+The key feature in FlowPilot is the tagging system:
+
+```python 
+@fp.data_reader(comment="Reads in a pandas dataframe")
+def read(filepath: str) -> pd.DataFrame:
+    return pd.read_csv(filepath)
+```
+
+Tag your functions and they become traceable, searchable, and reusable.
 
 ## Benefits of using FlowPilot
-- **Modular code**: FlowPilot encourages you to write modular code by organizing your functions into separate files. This makes it easier to test and maintain your code.
+
+- **Modular code**: FlowPilot encourages you to write modular code. This makes it easier to test and maintain your code.
 
 - **Easy organization**: FlowPilot automatically organizes your code into directories based on the tags you provide. This saves you time and effort and makes it easy to find what you need.
 
-- **Reduced complexity**: FlowPilot's tagging system simplifies the process of finding specific functions and understanding their purpose, making it easier to maintain and update a project over time.
+- **Reduced complexity**: FlowPilot's tagging & searching system simplifies the process of finding specific functions and understanding their purpose, making it easier to maintain and update a project over time.
+
+- **Search & Discovery**: In large code based, it is difficult to find whether or not a function already exists for your needs. FLowPilot enables functions to be tagged and commented, and you can search for REGEX matches for either the name, comment, or function itself. If there's a match, FlowPilot tells you the function.
 
 - **Pipelines**: Execute your code in the order it is intended.
-
-- **Production-ready code**: By using FlowPilot, you can ensure that your code is production-ready by organizing it in a way that is easy to manage and maintain.
 
 - **Easy function registration**: FlowPilot provides a convenient way to register functions and associate them with a category and comment. This can help ensure that all functions are properly documented and categorized.
 
@@ -50,12 +57,14 @@ from FlowPilot import *
 To tag your functions, you need to use the appropriate decorator provided by FlowPilot. 
 The comment is mandatory to emphasise code readability for you and your colleagues.
 
-Here's an example with some illustrative functions - note we've created a new category too.
+Here's an example with some illustrative functions - note we've created a new category too which automatically creates a new directory.
 
-We'll use titanic dataset.
+We'll use the classic titanic dataset.
 
 
 ```python
+import pandas as pd # for example only
+
 fp = FlowPilot(project_name="TitanicProject")
 
 @fp.data_reader(comment="Reads in a pandas dataframe")
@@ -69,6 +78,10 @@ def get_gender_only(df: pd.DataFrame, gender: str = "") -> pd.DataFrame:
 @fp.data_transformer(comment="Calculates avg. age by survival")
 def get_survivor_age(df: pd.DataFrame) -> pd.DataFrame:
     return df.groupby(["Survived"])["Age"].mean()
+
+@fp.data_transformer(comment="Calculates avg. fare by survival")
+def get_survivor_fare(df: pd.DataFrame) -> pd.DataFrame:
+    return df.groupby(["Survived"])["Fare"].mean()
 
 @fp.test(comment="Tests something...")
 def test_read(df: pd.DataFrame) -> pd.DataFrame:
@@ -88,60 +101,66 @@ fp.create_new_category(name="data_visualizer")
 def plot_age_dist_by_pclass(df: pd.DataFrame) -> None:
     """Visualize something..."""
     
+@fp.data_visualizer(comment="Visualize something else...")
+def plot_survival(df: pd.DataFrame) -> None:
+    """Visualize something esle..."""
 
 ```
 
-Now we have tagged our functions to their categories.
+Now we have tagged our functions in their categories.
 
 ## Display your registered functions
     
 ```python
-fp.display_functions()
+fp.display_functions(category_name="data_transformer", include_function=False)
 ```
 
-This will display all your functions registered in their categories along with their descriptions:
+This will display all your functions registered in the data_transformer category along with their descriptions:
 
 ```python
 {
     "functions": {
-        "data_reader": [
-            {
-                "name": "read",
-                "comment": "Reads in a pandas dataframe"
-            }
-        ],
         "data_transformer": [
             {
                 "name": "get_gender_only",
-                "comment": "Filters dataset by gender"
+                "comment": "Filters dataset by gender",
+                "function definition": "Not Displayed"
             },
             {
                 "name": "get_survivor_age",
-                "comment": "Calculates avg. age by survival"
-            }
-        ],
-        "test": [
+                "comment": "Calculates avg. age by survival",
+                "function definition": "Not Displayed"
+            },
             {
-                "name": "test_read",
-                "comment": "Tests something..."
-            }
-        ],
-        "data_evaluator": [
-            {
-                "name": "evaluate",
-                "comment": "Evaluates something..."
-            }
-        ],
-        "data_visualizer": [
-            {
-                "name": "plot_age_dist_by_pclass",
-                "comment": "Visualize something..."
+                "name": "get_survivor_fare",
+                "comment": "Calculates avg. fare by survival",
+                "function definition": "Not Displayed"
             }
         ]
     }
 }
 
 ```
+
+the default for fp.display_functions() is to display all registered functions.
+
+
+It is also possible to search functions.
+
+```python
+fp.search_functions("calc*")
+```
+
+This would return 
+
+```python
+Search results:
+Name: get_survivor_age, Category: data_transformer, Comment: Calculates avg. age by survival
+Name: get_survivor_fare, Category: data_transformer, Comment: Calculates avg. fare by survival
+```
+
+In large code bases this is extremely useful. 
+
 ## Pipelines
 
 Next, we can define a Pipeline. Notice how we can provide arguments for the functions too:
@@ -156,6 +175,21 @@ pipeline.add_step("data_transformer", get_survivor_age)
 pipeline.execute()
 ```
 
+And we can display the steps, too:
+
+```python
+pipeline.show_pipeline_steps()
+```
+
+Produces output:
+
+```python
+Pipeline steps:
+1. [data_reader] read(./sample_data/titanic.csv)
+2. [data_transformer] get_gender_only(female)
+3. [data_transformer] get_survivor_age()
+```
+
 The UI/UX is still in development. 
 
 Soon there will be DAG visialization and Pipeline validation build in to FlowPilot.
@@ -167,7 +201,7 @@ In addition, we will be building in parralel operation.
 Now you can compile these scripts in their respective folders:
 
 ```python
-fp.compile_scripts("all")
+fp.write_category_to_file("all")
 
 # We can also individual categories e.g. "data_reader"
 ```
@@ -193,6 +227,9 @@ TitanicProject/
 │   ├── test.py
 
 ```
+
+
+Each script file contains all imports defined in the project so each can be ran, regardless of links to other directories.
 
 ## Multiple Projects
 
@@ -233,4 +270,6 @@ This will create the new structures.
 
 - **DAGs**: Visualize your pipeline
 
-- **Improved Script Genearation**: Currently .py files are created without imports. This is a problem to solve.
+- **Call functions from FlowPilot**: E.g. fp.function_call(read, "input_arg") - allow the user to call functions they've discovered through the search system without having to import them manually.
+
+## **Contributions welcome**

@@ -8,12 +8,14 @@ from functools import wraps
 import logging
 from tqdm import tqdm
 import pandas as pd
+import textwrap
 
 
 class CategoryRegister:
     def __init__(self, categories: List[str]):
         self.categories = categories
-        self.functions: Dict[str, Dict[str, Optional[str]]] = {
+        
+        self.functions: Dict[str, Dict[str, Optional[Callable]]] = {
             category: {} for category in categories
         }
 
@@ -29,33 +31,145 @@ class CategoryRegister:
             self.categories.append(name)
             self.functions[name] = {}
 
+    
     def register_function(self, category: str, comment: Optional[str] = None) -> Callable:
         """Register a function in the specified category."""
 
         def decorator(func: Callable) -> Callable:
             func_name = func.__name__
             func.__category__ = category
-            self.functions[category][func_name] = comment
+            self.functions[category][func_name] = {
+                'comment': comment,
+                'function': func
+            }
             return func
 
         return decorator
     
-    def display_functions(self) -> None:
-        """Display the functions registered in all categories."""
+    def get_functions_by_category(self, category_name: str) -> Dict[str, Optional[str]]:
+        return self.functions.get(category_name, {})
+
+
+    def display_functions(self, category_name: Optional[str] = None, include_function: bool = False) -> None:
+        """Display the functions registered in all or a specific category."""
         function_data: Dict[str, Union[str, Dict[str, List[Dict[str, str]]]]] = {
             "functions": {},
         }
-        function_data["functions"] = {
-            category: [
-                {"name": func_name, "comment": comment or "no comment"}
-                for func_name, comment in functions.items()
-            ]
-            for category, functions in self.functions.items()
-            if functions
-        }
-        print(json.dumps(function_data, indent=4))
         
+        def format_function(func: Callable) -> str:
+            lines = inspect.getsource(func).split('\n')
+            dedented_lines = textwrap.dedent('\n'.join(lines)).split('\n')
+            return CategoryRegister._remove_decorator('\n'.join(dedented_lines))
 
+        if category_name is None:
+            function_data["functions"] = {
+                category: [
+                    {
+                        "name": func_name,
+                        "comment": func_data['comment'] or "no comment",
+                        "function definition": format_function(func_data['function']) if include_function else "Not Displayed"
+                    }
+                    for func_name, func_data in functions.items()
+                ]
+                for category, functions in self.functions.items()
+                if functions
+            }
+        elif category_name in self.functions:
+            function_data["functions"] = {
+                category_name: [
+                    {
+                        "name": func_name,
+                        "comment": func_data['comment'] or "no comment",
+                        "function definition": format_function(func_data['function']) if include_function else "Not Displayed"
+                    }
+                    for func_name, func_data in self.functions[category_name].items()
+                ],
+            }
+        else:
+            print(f"Category '{category_name}' not found.")
+            return
+
+        print(json.dumps(function_data, indent=4, default=str))
+        
+    @staticmethod
+    def _remove_decorator(func_str: str) -> str:
+        """Remove the decorator from the function source code."""
+        pattern = r"@\w+\.[a-z_]+\(.+?\)\n"
+        match = re.search(pattern, func_str)
+        if match:
+            func_str = func_str[: match.start()] + func_str[match.end() :]
+        return func_str
+        
+                
+    def write_category_to_file(self, category_name: str, output_directory: str = ".") -> None:
+        """Write functions in a specific category or all categories into a script file."""
+        if category_name.lower() == "all":
+            for category in self.functions:
+                self._write_single_category_to_file(category, output_directory)
+        else:
+            self._write_single_category_to_file(category_name, output_directory)
+
+    def _write_single_category_to_file(self, category_name: str, output_directory: str) -> None:
+        if category_name not in self.functions:
+            print(f"Category '{category_name}' not found.")
+            return
+
+        def format_function(func: Callable) -> str:
+            lines = inspect.getsource(func).split('\n')
+            dedented_lines = textwrap.dedent('\n'.join(lines)).split('\n')
+            return CategoryRegister._remove_decorator('\n'.join(dedented_lines))
+
+        file_name = f"{category_name}.py"
+        output_path = os.path.join(output_directory, file_name)
+
+        extractor = ImportExtractor()
+        unique_imports = extractor.get_unique_imports(os.getcwd())
+
+        with open(output_path, "w") as file:
+            file.write("# This script was generated by FlowPilot\n")
+            file.write("# Imports\n")
+            # Write imports
+            for import_line in unique_imports:
+                file.write("try:\n")
+                file.write(f"    {import_line}\n")
+                file.write("except ImportError as e:\n")
+                file.write(f"    print(f'Failed to import: {{e}}')\n")
+            file.write("\n")
+
+            # Write functions
+            file.write("# Functions\n")
+            for func_name, func_data in self.functions[category_name].items():
+                file.write(format_function(func_data["function"]))
+                file.write("\n\n")
+
+
+    
+    def search_functions(self, search_query: str, search_field: Optional[str] = None, case_sensitive: bool = False) -> List[Dict[str, str]]:
+        """Search for functions based on name, category, or comment."""
+        if search_field not in [None, "name", "category", "comment"]:
+            raise ValueError("Invalid search_field. It should be one of 'name', 'category', or 'comment'.")
+
+        if not case_sensitive:
+            search_query = search_query.lower()
+
+        def match(item: str) -> bool:
+            if not case_sensitive:
+                item = item.lower()
+            return bool(re.search(search_query, item or ""))
+
+        search_results = [
+            {"name": func_name, "category": category, "comment": func_data['comment']}
+            for category, functions in self.functions.items()
+            for func_name, func_data in functions.items()
+            if (
+                (search_field is None and (match(func_name) or match(category) or match(func_data['comment'])))
+                or (search_field == "name" and match(func_name))
+                or (search_field == "category" and match(category))
+                or (search_field == "comment" and match(func_data['comment']))
+            )
+        ]
+        return search_results
+    
 
 class Project:
     def __init__(self, project_name: str):
@@ -102,53 +216,8 @@ class Project:
             func_str = func_str[: match.start()] + func_str[match.end() :]
         return func_str
     
-    @staticmethod
-    def _get_import_statements(func_str: str) -> str:
-        """Get the import statements from the function source code."""
-        pattern = r"^(?:from .* import .*|import .*)$"
-        import_statements = re.findall(pattern, func_str, re.MULTILINE)
-        return "\n".join(import_statements)
-
-
-    def _create_script_file(self, category_name: str, functions: Dict[str, Optional[str]], generate_docstrings: bool = False) -> None:
-        """Create a script file for the given category."""
-        category_path = os.path.join(self.project_name, category_name)
-        os.makedirs(category_path, exist_ok=True)
-        file_path = os.path.join(category_path, f"{category_name}.py")
-        with open(file_path, "w") as f:
-            f.write("# This file was generated by FlowPilot\n\n")
-            imports = set()
-            for func_name, _ in functions.items():
-                func = globals().get(func_name)
-                source = self._remove_decorator(inspect.getsource(func))
-                imports.update(self._get_import_statements(source).splitlines())
-            f.write("\n".join(sorted(imports)) + "\n\n")
-
-            for func_name, comment in functions.items():
-                func = globals().get(func_name)
-                source = self._remove_decorator(inspect.getsource(func))
-                if generate_docstrings:
-                    docstring = self._generate_function_docstring(func, comment)
-                    source_lines = source.splitlines()
-                    indent = " " * 4  # Change the number to adjust the indentation size
-                    source_lines.insert(1, f'{indent}"""\n{docstring}\n{indent}"""')
-                    source = "\n".join(source_lines)
-                f.write(f"{source}\n\n")
-
-
-    def compile_scripts(self, categories: List[str], functions: Dict[str, Dict[str, Optional[str]]], category: str = "all", generate_docstrings: bool = False) -> str:
-        """Compile scripts for the specified category or all categories."""
-        if category == "all":
-            compile_categories = categories
-        elif not category in categories:
-            raise ValueError(f"{category} is not a valid category name.")
-        else:
-            compile_categories = [category]
-
-        for category_name in compile_categories:
-            self._create_script_file(category_name, functions[category_name], generate_docstrings)
-
-        return "SUCCESS"
+    
+    
 
 class FlowPilot:
     def __init__(self, project_name: str):
@@ -156,7 +225,6 @@ class FlowPilot:
         self.project_name = project_name
         self.category_register = CategoryRegister(categories)
         self.project = Project(self.project_name)
-
         self._create_shortcuts_for_categories(categories)
     
 
@@ -184,19 +252,28 @@ class FlowPilot:
             self.category_register.create_new_category(category_name)
         return self.category_register.register_function(category_name, comment)
 
-    def display_functions(self) -> None:
+    def display_functions(self, category_name: Optional[str] = None, include_function: bool = False) -> None:
         """Display the functions registered in all categories."""
-        self.category_register.display_functions()
+        self.category_register.display_functions(category_name, include_function)
 
-    def compile_scripts(self, category: str = "all", generate_docstrings: bool = False) -> str:
-        """Compile scripts for the specified category or all categories."""
-        return self.project.compile_scripts(
-            self.category_register.categories,
-            self.category_register.functions,
-            category,
-            generate_docstrings
-        )
     
+    def search_functions(self, search_query: str, search_field: Optional[str] = None) -> None:
+        """Search for functions based on name, category, or comment."""
+        search_results = self.category_register.search_functions(search_query, search_field)
+        if search_results:
+            print("Search results:")
+            for result in search_results:
+                print(f"Name: {result['name']}, Category: {result['category']}, Comment: {result['comment']}")
+        else:
+            print("No matching functions found.")
+            
+    def write_category_to_file(self, category_name: str, output_path: Optional[str] = None) -> None:
+        """Write the functions of a specified category to a script file along with the necessary imports."""
+        if output_path is None:
+            output_path = self.project_name
+        self.category_register.write_category_to_file(category_name, output_path)
+            
+            
 class DataQualityConstraints:
     @staticmethod
     def expect_column_types(columns_types, expect_mode='expect_or_drop'):
@@ -207,7 +284,8 @@ class DataQualityConstraints:
                 for column, expected_type in columns_types.items():
                     if not pd.api.types.is_dtype_equal(df[column].dtype, expected_type):
                         if expect_mode == 'expect_or_drop':
-                            df = df[df[column].notna()]
+                            mask = df[column].apply(lambda x: isinstance(x, expected_type))
+                            df = df[mask]
                         elif expect_mode == 'expect_but_allow':
                             continue
                         elif expect_mode == 'expect_or_fail':
@@ -266,3 +344,65 @@ class Pipeline:
             for step, _, _ in self.steps
         ]
         return json.dumps(steps_data)
+
+    
+class ImportExtractor:
+
+    @staticmethod
+    def extract_all_imports(file_content: str, ignore_nesting: bool = False) -> List[str]:
+        base_regexes = [
+            r'import [\w.]+ as [\w.]+',
+            r'import [\w.]+',
+            r'from [\w.]+ import [\w.]+ as [\w.]+',
+            r'from [\w.]+ import [\w.]+',
+        ]
+        regexes = []
+
+        if ignore_nesting:
+            for regex in base_regexes:
+                regexes.append(f'^{regex}')
+                regexes.append(f'\n{regex}')
+        else:
+            regexes += base_regexes
+
+        regex = re.compile(f'({"|".join(regexes)})')
+        return [s.strip() for s in re.findall(regex, file_content)]
+
+    @staticmethod
+    def files_in_path(path: str) -> List[str]:
+        files = []
+        for r, d, f in os.walk(path):
+            for file in f:
+                files.append(os.path.join(r, file))
+        return files
+
+    @staticmethod
+    def filter_file_list(file_list: List[str]) -> List[str]:
+        return [item for item in file_list if ".git" not in item and "env" not in item]
+
+    def get_import_list(self, file_list: List[str]) -> List[List[str]]:
+        import_list = []
+        for file_name in file_list:
+            try:
+                with open(file_name, mode='r') as f:
+                    file_content = f.read()
+                    import_list.append(self.extract_all_imports(file_content))
+            except:
+                pass
+
+        return import_list
+
+    @staticmethod
+    def make_unique_list(import_list: List[List[str]]) -> List[str]:
+        flat_list = [item for sublist in import_list for item in sublist]
+        return list(set(flat_list))
+
+    @staticmethod
+    def clean_list(import_list: List[str]) -> List[str]:
+        return [item for item in import_list if item != 'import .']
+
+    def get_unique_imports(self, path: str) -> List[str]:
+        files = self.filter_file_list(self.files_in_path(path))
+        import_list = self.get_import_list(files)
+        unique_imports = self.make_unique_list(import_list)
+        return self.clean_list(unique_imports)
