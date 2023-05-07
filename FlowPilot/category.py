@@ -1,0 +1,167 @@
+import os
+import re
+import inspect
+import json
+from typing import Callable, Dict, List, Optional, Union, Any
+from functools import wraps
+import textwrap
+
+
+class CategoryRegister:
+    def __init__(self, categories: List[str]):
+        self.categories = categories
+        
+        self.functions: Dict[str, Dict[str, Optional[Callable]]] = {
+            category: {} for category in categories
+        }
+
+    def is_valid_category(self, category_name: str) -> bool:
+        """Check if the given category name is valid."""
+        return category_name in self.categories
+
+    def create_new_category(self, name: str) -> None:
+        """Create a new category."""
+        if name in self.categories:
+            print(f"Category '{name}' already exists.")
+        else:
+            self.categories.append(name)
+            
+
+    
+    def register_function(self, category: str, comment: Optional[str] = None) -> Callable[..., Any]:
+        """Register a function in the specified category."""
+
+        def decorator(func: Callable) -> Callable:
+            func_name = func.__name__
+            func.__category__ = category
+            self.functions[category][func_name] = {
+                'comment': comment,
+                'function': func
+            }
+            return func
+
+        return decorator
+    
+    def get_functions_by_category(self, category_name: str) -> Dict[str, Optional[str]]:
+        return self.functions.get(category_name, {})
+
+
+    def display_functions(self, category_name: Optional[str] = None, include_function: bool = False) -> None:
+        """Display the functions registered in all or a specific category."""
+        function_data: Dict[str, Union[str, Dict[str, List[Dict[str, str]]]]] = {
+            "functions": {},
+        }
+        
+        def format_function(func: Callable) -> str:
+            lines = inspect.getsource(func).split('\n')
+            dedented_lines = textwrap.dedent('\n'.join(lines)).split('\n')
+            return CategoryRegister._remove_decorator('\n'.join(dedented_lines))
+
+        if category_name is None:
+            function_data["functions"] = {
+                category: [
+                    {
+                        "name": func_name,
+                        "comment": func_data['comment'] or "no comment",
+                        "function definition": format_function(func_data['function']) if include_function else "Not Displayed"
+                    }
+                    for func_name, func_data in functions.items()
+                ]
+                for category, functions in self.functions.items()
+                if functions
+            }
+        elif category_name in self.functions:
+            function_data["functions"] = {
+                category_name: [
+                    {
+                        "name": func_name,
+                        "comment": func_data['comment'] or "no comment",
+                        "function definition": format_function(func_data['function']) if include_function else "Not Displayed"
+                    }
+                    for func_name, func_data in self.functions[category_name].items()
+                ],
+            }
+        else:
+            print(f"Category '{category_name}' not found.")
+            return
+
+        print(json.dumps(function_data, indent=4, default=str))
+        
+    @staticmethod
+    def _remove_decorator(func_str: str) -> str:
+        """Remove the decorator from the function source code."""
+        pattern = r"@\w+\.[a-z_]+\(.+?\)\n"
+        match = re.search(pattern, func_str)
+        if match:
+            func_str = func_str[: match.start()] + func_str[match.end() :]
+        return func_str
+        
+                
+    def write_category_to_file(self, category_name: str, output_directory: str = ".") -> None:
+        """Write functions in a specific category or all categories into a script file."""
+        if category_name.lower() == "all":
+            for category in self.functions:
+                self._write_single_category_to_file(category, output_directory)
+        else:
+            self._write_single_category_to_file(category_name, output_directory)
+
+    def _write_single_category_to_file(self, category_name: str, output_directory: str) -> None:
+        if category_name not in self.functions:
+            print(f"Category '{category_name}' not found.")
+            return
+
+        def format_function(func: Callable) -> str:
+            lines = inspect.getsource(func).split('\n')
+            dedented_lines = textwrap.dedent('\n'.join(lines)).split('\n')
+            return CategoryRegister._remove_decorator('\n'.join(dedented_lines))
+
+        file_name = f"{category_name}.py"
+        output_path = os.path.join(output_directory, file_name)
+
+        extractor = ImportExtractor()
+        unique_imports = extractor.get_unique_imports(os.getcwd())
+
+        with open(output_path, "w") as file:
+            file.write("# This script was generated by FlowPilot\n")
+            file.write("# Imports\n")
+            # Write imports
+            for import_line in unique_imports:
+                file.write("try:\n")
+                file.write(f"    {import_line}\n")
+                file.write("except ImportError as e:\n")
+                file.write(f"    print(f'Failed to import: {{e}}')\n")
+            file.write("\n")
+
+            # Write functions
+            file.write("# Functions\n")
+            for func_name, func_data in self.functions[category_name].items():
+                file.write(format_function(func_data["function"]))
+                file.write("\n\n")
+
+
+    
+    def search_functions(self, search_query: str, search_field: Optional[str] = None, case_sensitive: bool = False) -> List[Dict[str, str]]:
+        """Search for functions based on name, category, or comment."""
+        if search_field not in [None, "name", "category", "comment"]:
+            raise ValueError("Invalid search_field. It should be one of 'name', 'category', or 'comment'.")
+
+        if not case_sensitive:
+            search_query = search_query.lower()
+
+        def match(item: str) -> bool:
+            if not case_sensitive:
+                item = item.lower()
+            return bool(re.search(search_query, item or ""))
+
+        search_results = [
+            {"name": func_name, "category": category, "comment": func_data['comment']}
+            for category, functions in self.functions.items()
+            for func_name, func_data in functions.items()
+            if (
+                (search_field is None and (match(func_name) or match(category) or match(func_data['comment'])))
+                or (search_field == "name" and match(func_name))
+                or (search_field == "category" and match(category))
+                or (search_field == "comment" and match(func_data['comment']))
+            )
+        ]
+        return search_results
